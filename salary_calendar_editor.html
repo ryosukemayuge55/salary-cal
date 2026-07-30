@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>給与カレンダー 2026</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Helvetica Neue', sans-serif; background: #f7f7f5; color: #222; }
+
+/* ヘッダー */
+.header {
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky; top: 0; z-index: 10;
+}
+.header h1 { font-size: 14px; font-weight: 700; flex: 1; }
+.header select {
+  padding: 6px 8px; font-size: 13px; border-radius: 8px;
+  border: 1px solid #d0d0d0; background: #fff; -webkit-appearance: auto;
+}
+.btn-reset {
+  padding: 6px 10px; font-size: 12px; border-radius: 8px;
+  border: none; background: #f0f0f0; color: #555; font-weight: 600; cursor: pointer;
+  white-space: nowrap;
+}
+.btn-reset:active { background: #ddd; }
+
+/* サマリー：月収合計＋平均日収の横2列 */
+.summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+.mc { background: #f7f7f5; border-radius: 8px; padding: 7px 10px; }
+.mc-l { font-size: 10px; color: #888; margin-bottom: 2px; }
+.mc-v { font-size: 16px; font-weight: 700; }
+
+/* バイト別：横4列1行 */
+.breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 6px 10px 8px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+.bc { border-radius: 7px; padding: 6px 5px; border: 1px solid #eee; text-align: center; }
+.bc-l { font-size: 9px; font-weight: 700; margin-bottom: 2px; }
+.bc-v { font-size: 12px; font-weight: 700; }
+.bc-s { font-size: 9px; color: #888; margin-top: 1px; }
+.b1 { background: #FFF3E0; } .b1 .bc-l { color: #7f3e00; }
+.b2 { background: #EBF7FA; } .b2 .bc-l { color: #0C5460; }
+.b3 { background: #F0FBF4; } .b3 .bc-l { color: #155724; }
+.b4 { background: #F6F0FB; } .b4 .bc-l { color: #5a1e8c; }
+
+/* カレンダー */
+.cal-wrap { padding: 6px 4px; }
+.cal { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.cal th {
+  font-size: 11px; font-weight: 700; color: #888;
+  padding: 4px 1px; text-align: center; border-bottom: 1px solid #ddd;
+}
+.cal th.sun { color: #c0392b; } .cal th.sat { color: #2980b9; }
+.cal td {
+  vertical-align: top;
+  border: 1px solid #e8e8e8;
+  padding: 2px 2px;
+  height: 75px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.1s;
+}
+.cal td:active { background: #e8f4ff; }
+.cal td.em { background: transparent; border-color: transparent; cursor: default; }
+
+/* 日付 */
+.dn { font-size: 10px; font-weight: 700; margin-bottom: 1px; line-height: 1.2; }
+.dn.sun { color: #c0392b; } .dn.sat { color: #2980b9; }
+
+/* シフトタグ */
+.stag {
+  display: block;
+  font-size: 7.5px;
+  font-weight: 700;
+  border-radius: 2px;
+  padding: 1px 2px;
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+}
+.s1 { background: #FFE0B2; color: #7f3e00; }
+.s2 { background: #D1ECF1; color: #0C5460; }
+.s3 { background: #D4EDDA; color: #155724; }
+.s4 { background: #E8D5F5; color: #5a1e8c; }
+.dpay { font-size: 7px; color: #aaa; margin-top: 1px; font-weight: 600; }
+.memo-tag {
+  font-size: 7px; color: #000; margin-top: 1px;
+  white-space: pre-wrap; overflow: hidden;
+  font-weight: 700; word-break: break-all; line-height: 1.2;
+}
+
+/* モーダル（下から出るシート） */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 100;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  padding: 8px 16px 36px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+}
+.modal-handle { width: 36px; height: 4px; background: #ddd; border-radius: 2px; margin: 0 auto 14px; }
+.modal h2 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.section-label { font-size: 11px; color: #888; font-weight: 700; margin-bottom: 6px; display: block; letter-spacing: 0.04em; }
+.shift-list { margin-bottom: 12px; }
+.shift-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 10px 12px; border-radius: 8px; border: 1px solid #eee; }
+.shift-row-label { font-size: 13px; font-weight: 700; flex: 1; }
+.del-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 4px; }
+.del-btn:active { color: #e74c3c; }
+.add-section { border-top: 1px solid #f0f0f0; padding-top: 12px; margin-bottom: 12px; }
+.add-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.add-row select, .add-row input {
+  padding: 9px 10px; font-size: 14px; border-radius: 8px;
+  border: 1px solid #d0d0d0; background: #fff; -webkit-appearance: auto;
+}
+.add-row input { width: 78px; }
+.btn-add { padding: 9px 16px; font-size: 13px; border-radius: 8px; border: none; background: #222; color: #fff; cursor: pointer; font-weight: 600; }
+.memo-section { border-top: 1px solid #f0f0f0; padding-top: 12px; }
+.memo-section textarea {
+  width: 100%; padding: 10px 12px; font-size: 14px; border-radius: 8px;
+  border: 1px solid #d0d0d0; resize: none; height: 80px;
+  overflow-y: auto; font-family: inherit; line-height: 1.5;
+}
+.memo-section textarea:focus { outline: none; border-color: #888; }
+.modal-footer { display: flex; justify-content: flex-end; margin-top: 14px; }
+.btn-close { padding: 10px 24px; font-size: 14px; border-radius: 8px; border: 1px solid #d0d0d0; background: #fff; cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>給与カレンダー 2026</h1>
+  <select id="sel-month"></select>
+  <button class="btn-reset" onclick="resetMonth()">この月をリセット</button>
+</div>
+
+<!-- サマリー：月収合計・平均日収のみ -->
+<div class="summary">
+  <div class="mc"><div class="mc-l">月収合計</div><div class="mc-v" id="s-total">—</div></div>
+  <div class="mc"><div class="mc-l">平均日収</div><div class="mc-v" id="s-avg">—</div></div>
+</div>
+
+<!-- バイト別内訳 -->
+<div class="breakdown">
+  <div class="bc b1"><div class="bc-l">① 日給1万</div><div class="bc-v" id="b1v">—</div><div class="bc-s" id="b1d">—</div></div>
+  <div class="bc b2"><div class="bc-l">② 1500円〜</div><div class="bc-v" id="b2v">—</div><div class="bc-s" id="b2d">—</div></div>
+  <div class="bc b3"><div class="bc-l">③ 1330円</div><div class="bc-v" id="b3v">—</div><div class="bc-s" id="b3d">—</div></div>
+  <div class="bc b4"><div class="bc-l">④ 1500円</div><div class="bc-v" id="b4v">—</div><div class="bc-s" id="b4d">—</div></div>
+</div>
+
+<!-- カレンダー -->
+<div class="cal-wrap">
+  <table class="cal">
+    <thead><tr>
+      <th class="sun">日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th class="sat">土</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modal-title">シフト編集</h2>
+    <span class="section-label">シフト一覧</span>
+    <div class="shift-list" id="shift-list"></div>
+    <div class="add-section">
+      <span class="section-label">シフトを追加</span>
+      <div class="add-row">
+        <select id="add-job">
+          <option value="1">① 日給1万円</option>
+          <option value="2">② 時給制</option>
+          <option value="3">③ 時給制</option>
+          <option value="4">④ 時給制</option>
+        </select>
+        <input type="text" id="add-start" placeholder="開始 8:30" maxlength="5">
+        <span style="font-size:12px;color:#888">〜</span>
+        <input type="text" id="add-end" placeholder="終了 15:30" maxlength="5">
+      </div>
+      <button class="btn-add" onclick="addShift()">追加</button>
+    </div>
+    <div class="memo-section">
+      <span class="section-label">メモ（自由記入）</span>
+      <textarea id="memo-input" placeholder="例：病院 14:00、友人と食事など"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-close" onclick="closeModal()">完了</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function isoWd(year, month, day) {
+  var g = new Date(year, month-1, day).getDay();
+  return g === 0 ? 7 : g;
+}
+function nthWd(year, month, day) {
+  var t = isoWd(year, month, day), c = 0;
+  for (var d = 1; d <= day; d++) if (isoWd(year, month, d) === t) c++;
+  return c;
+}
+function dim(year, month) { return new Date(year, month, 0).getDate(); }
+
+function defaultShifts(year, month) {
+  var d_max = dim(year, month), res = {};
+  for (var d = 1; d <= d_max; d++) {
+    var wd = isoWd(year, month, d), shifts = [];
+    if (wd === 7) {                    // 日：②
+      shifts = [{job:2,start:21,end:27}];
+    } else if (wd === 1) {             // 月：①②
+      shifts = [{job:1,start:8.5,end:15.5},{job:2,start:20,end:26}];
+    } else if (wd === 2) {             // 火：翌日水曜の週番で判断
+      var wn = (d+1 <= d_max) ? nthWd(year, month, d+1) : 1;
+      if (wn===1||wn===3) {            // 第1第3水前日：④②
+        shifts = [{job:4,start:14,end:20},{job:2,start:21,end:27}];
+      } else {                         // 第2第4第5水前日：③④
+        shifts = [{job:3,start:8,end:12},{job:4,start:14,end:20}];
+      }
+    } else if (wd === 3) {             // 水：週番で判断
+      var n = nthWd(year, month, d);
+      if (n===1||n===3) {              // 第1第3水：①②
+        shifts = [{job:1,start:8.5,end:15.5},{job:2,start:20,end:26}];
+      } else {                         // 第2第4第5水：③②
+        shifts = [{job:3,start:6,end:12},{job:2,start:20,end:26}];
+      }
+    } else if (wd === 4) {             // 木：①
+      shifts = [{job:1,start:8.5,end:15}];
+    } else if (wd === 5) {             // 金：③④
+      shifts = [{job:3,start:6,end:12},{job:4,start:14,end:20}];
+    } else if (wd === 6) {             // 土：③④
+      shifts = [{job:3,start:6,end:12},{job:4,start:14,end:20}];
+    }
+    if (shifts.length) res[d] = { shifts: shifts, memo: '' };
+  }
+  return res;
+}
+
+function calcPay(job, start, end) {
+  if (job===1) return 10000;
+  if (job===2) {
+    var n=(end<=22)?end-start:(start>=22)?0:22-start;
+    var ni=(end<=22)?0:(start>=22)?end-start:end-22;
+    return Math.round(n*1500+ni*2050);
+  }
+  if (job===3) return Math.round((end-start)*1330);
+  if (job===4) return Math.round((end-start)*1500);
+  return 0;
+}
+function fmtH(h) { return Math.floor(h)+':'+(h%1?'30':'00'); }
+function fmtEnd(h) { return Math.floor(h)+':'+(h%1?'30':'00'); }
+function parseH(s) {
+  var p=s.trim().split(':');
+  if (p.length!==2) return null;
+  var h=parseInt(p[0]),m=parseInt(p[1]);
+  if (isNaN(h)||isNaN(m)) return null;
+  return h+(m===30?0.5:0);
+}
+
+var currentYear=2026, currentMonth=7, monthData={};
+
+function getMonthData(m) {
+  if (!monthData[m]) monthData[m]=defaultShifts(currentYear,m);
+  return monthData[m];
+}
+function ensureDay(m,d) {
+  var mData=getMonthData(m);
+  if (!mData[d]) mData[d]={shifts:[],memo:''};
+  return mData[d];
+}
+
+var JOB_LABELS=['①','②','③','④'];
+var JOB_BG=['#FFE0B2','#D1ECF1','#D4EDDA','#E8D5F5'];
+var JOB_FG=['#7f3e00','#0C5460','#155724','#5a1e8c'];
+
+function render() {
+  var m=currentMonth, mData=getMonthData(m), d_max=dim(currentYear,m);
+  var total=0, wDays=0;
+  var jst={1:{p:0,d:0},2:{p:0,d:0},3:{p:0,d:0},4:{p:0,d:0}};
+  var dayPay={};
+
+  for (var d=1;d<=d_max;d++) {
+    var entry=mData[d]||{shifts:[],memo:''};
+    var dp=0,seen={};
+    (entry.shifts||[]).forEach(function(s){
+      var p=calcPay(s.job,s.start,s.end);
+      dp+=p;total+=p;
+      if(!seen[s.job]){jst[s.job].d++;seen[s.job]=true;}
+      jst[s.job].p+=p;
+    });
+    if(dp>0){dayPay[d]=dp;wDays++;}
+  }
+
+  document.getElementById('s-total').textContent='¥'+total.toLocaleString();
+  document.getElementById('s-avg').textContent=wDays?'¥'+Math.round(total/wDays).toLocaleString():'—';
+  for(var j=1;j<=4;j++){
+    document.getElementById('b'+j+'v').textContent='¥'+jst[j].p.toLocaleString();
+    document.getElementById('b'+j+'d').textContent=jst[j].d+'日';
+  }
+
+  var firstCol=isoWd(currentYear,m,1);
+  firstCol=firstCol===7?0:firstCol;
+  var tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  var day=1;
+
+  for(var row=0;row<6;row++){
+    if(day>d_max) break;
+    var tr=document.createElement('tr');
+    for(var c=0;c<7;c++){
+      var td=document.createElement('td');
+      if((row===0&&c<firstCol)||day>d_max){
+        td.className='em';
+      } else {
+        (function(d_,col_){
+          td.onclick=function(){openModal(d_);};
+          var entry2=mData[d_]||{shifts:[],memo:''};
+          var shifts2=(entry2.shifts||[]).slice().sort(function(a,b){return a.start-b.start;});
+          var dn=document.createElement('div');
+          dn.className='dn'+(col_===0?' sun':col_===6?' sat':'');
+          dn.textContent=d_;
+          td.appendChild(dn);
+          shifts2.forEach(function(s2){
+            var sp=document.createElement('span');
+            sp.className='stag s'+s2.job;
+            sp.textContent=JOB_LABELS[s2.job-1]+' '+fmtH(s2.start)+'〜'+fmtEnd(s2.end);
+            td.appendChild(sp);
+          });
+          if(dayPay[d_]){
+            var dv=document.createElement('div');
+            dv.className='dpay';
+            dv.textContent='¥'+dayPay[d_].toLocaleString();
+            td.appendChild(dv);
+          }
+          if(entry2.memo&&entry2.memo.trim()){
+            var mt=document.createElement('div');
+            mt.className='memo-tag';
+            mt.textContent='📝 '+entry2.memo;
+            td.appendChild(mt);
+          }
+        })(day,c);
+        day++;
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+var editDay=null;
+
+function openModal(d) {
+  editDay=d;
+  var m=currentMonth, mData=getMonthData(m);
+  var entry=mData[d]||{shifts:[],memo:''};
+  var shifts=(entry.shifts||[]).slice().sort(function(a,b){return a.start-b.start;});
+  var dow_jp=['月','火','水','木','金','土','日'];
+  var wd=isoWd(currentYear,m,d);
+  document.getElementById('modal-title').textContent=m+'月'+d+'日（'+dow_jp[wd===7?6:wd-1]+'）';
+  var list=document.getElementById('shift-list');
+  list.innerHTML='';
+  if(shifts.length===0) list.innerHTML='<p style="font-size:12px;color:#bbb;margin-bottom:8px;">シフトなし</p>';
+  shifts.forEach(function(s){
+    var row=document.createElement('div');
+    row.className='shift-row';
+    row.style.cssText='border-left:3px solid '+JOB_FG[s.job-1]+';';
+    var lbl=document.createElement('span');
+    lbl.className='shift-row-label';
+    lbl.style.color=JOB_FG[s.job-1];
+    lbl.textContent=JOB_LABELS[s.job-1]+' '+fmtH(s.start)+'〜'+fmtEnd(s.end);
+    var del=document.createElement('button');
+    del.className='del-btn'; del.textContent='✕';
+    del.onclick=function(){removeShift(s);};
+    row.appendChild(lbl); row.appendChild(del);
+    list.appendChild(row);
+  });
+  document.getElementById('memo-input').value=entry.memo||'';
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  if(editDay!==null){
+    ensureDay(currentMonth,editDay).memo=document.getElementById('memo-input').value;
+  }
+  document.getElementById('modal').classList.remove('open');
+  editDay=null;
+  render();
+}
+
+function removeShift(target) {
+  var entry=ensureDay(currentMonth,editDay);
+  entry.shifts=entry.shifts.filter(function(s){
+    return !(s.job===target.job&&s.start===target.start&&s.end===target.end);
+  });
+  openModal(editDay); render();
+}
+
+function addShift() {
+  var job=parseInt(document.getElementById('add-job').value);
+  var start=parseH(document.getElementById('add-start').value);
+  var end=parseH(document.getElementById('add-end').value);
+  if(start===null||end===null||end<=start){
+    alert('時間を正しく入力してください（例: 8:30 〜 15:30）'); return;
+  }
+  ensureDay(currentMonth,editDay).shifts.push({job:job,start:start,end:end});
+  document.getElementById('add-start').value='';
+  document.getElementById('add-end').value='';
+  openModal(editDay); render();
+}
+
+function resetMonth() {
+  if(!confirm(currentMonth+'月のシフトをルーティンに戻しますか？\n※ メモも含めすべてリセットされます')) return;
+  monthData[currentMonth]=defaultShifts(currentYear,currentMonth);
+  render();
+}
+
+document.getElementById('modal').addEventListener('click',function(e){
+  if(e.target===this) closeModal();
+});
+
+var sel=document.getElementById('sel-month');
+[6,7,8,9,10,11,12].forEach(function(m){
+  var o=document.createElement('option');
+  o.value=m; o.textContent=m+'月';
+  if(m===currentMonth) o.selected=true;
+  sel.appendChild(o);
+});
+sel.addEventListener('change',function(){currentMonth=parseInt(this.value);render();});
+render();
+</script>
+</body>
+</html>
