@@ -308,7 +308,15 @@ function generateBookmarkURL() {
   try {
     var data = btoa(encodeURIComponent(JSON.stringify(monthData)));
     var url = location.href.split('#')[0] + '#' + data;
-    prompt('このURLをコピーしてブックマークに保存してください:', url);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function(){
+        alert('URLをコピーしました！\nブックマークに貼り付けて保存してください。');
+      }).catch(function(){
+        prompt('このURLをコピーしてブックマークに保存してください:', url);
+      });
+    } else {
+      prompt('このURLをコピーしてブックマークに保存してください:', url);
+    }
   } catch(e) { alert('URL生成に失敗しました'); }
 }
 
