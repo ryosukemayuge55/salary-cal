@@ -285,6 +285,17 @@ function parseH(s) {
 
 var currentYear=2026, currentMonth=7, monthData={};
 
+// ローカルストレージへの保存・読み込み
+function saveToStorage() {
+  try { localStorage.setItem('salaryCalData', JSON.stringify(monthData)); } catch(e) {}
+}
+function loadFromStorage() {
+  try {
+    var saved = localStorage.getItem('salaryCalData');
+    if (saved) monthData = JSON.parse(saved);
+  } catch(e) {}
+}
+
 function getMonthData(m) {
   if (!monthData[m]) monthData[m]=defaultShifts(currentYear,m);
   return monthData[m];
@@ -437,6 +448,7 @@ function addShift() {
 function resetMonth() {
   if(!confirm(currentMonth+'月のシフトをルーティンに戻しますか？\n※ メモも含めすべてリセットされます')) return;
   monthData[currentMonth]=defaultShifts(currentYear,currentMonth);
+  saveToStorage();
   render();
 }
 
@@ -451,6 +463,7 @@ var sel=document.getElementById('sel-month');
   if(m===currentMonth) o.selected=true;
   sel.appendChild(o);
 });
+loadFromStorage();
 sel.addEventListener('change',function(){currentMonth=parseInt(this.value);render();});
 render();
 </script>
