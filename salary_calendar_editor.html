@@ -437,6 +437,7 @@ function closeModal() {
   }
   document.getElementById('modal').classList.remove('open');
   editDay=null;
+  saveToStorage();
   render();
 }
 
@@ -445,6 +446,7 @@ function removeShift(target) {
   entry.shifts=entry.shifts.filter(function(s){
     return !(s.job===target.job&&s.start===target.start&&s.end===target.end);
   });
+  saveToStorage();
   openModal(editDay); render();
 }
 
