@@ -285,15 +285,37 @@ function parseH(s) {
 
 var currentYear=2026, currentMonth=7, monthData={};
 
-// ローカルストレージへの保存・読み込み
-function saveToStorage() {
-  try { localStorage.setItem('salaryCalData', JSON.stringify(monthData)); } catch(e) {}
+// IndexedDBへの保存・読み込み
+var DB_NAME='salaryCalDB', DB_VER=1, DB_STORE='data';
+var db=null;
+
+function openDB(cb) {
+  if (db) { cb(db); return; }
+  var req=indexedDB.open(DB_NAME, DB_VER);
+  req.onupgradeneeded=function(e){ e.target.result.createObjectStore(DB_STORE); };
+  req.onsuccess=function(e){ db=e.target.result; cb(db); };
+  req.onerror=function(){ cb(null); };
 }
-function loadFromStorage() {
-  try {
-    var saved = localStorage.getItem('salaryCalData');
-    if (saved) monthData = JSON.parse(saved);
-  } catch(e) {}
+
+function saveToStorage() {
+  openDB(function(db){
+    if(!db) return;
+    var tx=db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).put(JSON.stringify(monthData),'monthData');
+  });
+}
+
+function loadFromStorage(cb) {
+  openDB(function(db){
+    if(!db){ cb(); return; }
+    var tx=db.transaction(DB_STORE,'readonly');
+    var req=tx.objectStore(DB_STORE).get('monthData');
+    req.onsuccess=function(e){
+      if(e.target.result){ try{ monthData=JSON.parse(e.target.result); }catch(ex){} }
+      cb();
+    };
+    req.onerror=function(){ cb(); };
+  });
 }
 
 function getMonthData(m) {
@@ -463,9 +485,10 @@ var sel=document.getElementById('sel-month');
   if(m===currentMonth) o.selected=true;
   sel.appendChild(o);
 });
-loadFromStorage();
+loadFromStorage(function(){
+  render();
+});
 sel.addEventListener('change',function(){currentMonth=parseInt(this.value);render();});
-render();
 </script>
 </body>
 </html>
