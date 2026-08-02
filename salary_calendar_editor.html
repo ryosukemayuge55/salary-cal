@@ -421,7 +421,7 @@ function render() {
           if(entry2.memo&&entry2.memo.trim()){
             var mt=document.createElement('div');
             mt.className='memo-tag';
-            mt.textContent='📝 '+entry2.memo;
+            mt.textContent=entry2.memo;
             td.appendChild(mt);
           }
         })(day,c);
